@@ -1,4 +1,4 @@
-# 🍝 pastaOS
+# 🍚 kacchiOS
 
 A minimal, educational baremetal operating system designed for teaching OS fundamentals.
 
@@ -8,7 +8,7 @@ A minimal, educational baremetal operating system designed for teaching OS funda
 
 ## 📖 Overview
 
-pastaOS is a simple, bare-metal operating system built from scratch for educational purposes. It provides a clean foundation for students to learn operating system concepts by implementing core components themselves.
+kacchiOS is a simple, bare-metal operating system built from scratch for educational purposes. It provides a clean foundation for students to learn operating system concepts by implementing core components themselves.
 
 ### Current Features
 
@@ -20,10 +20,10 @@ pastaOS is a simple, bare-metal operating system built from scratch for educatio
 
 ### Future Extensions (Student Assignments)
 
-Students will extend pastaOS by implementing:
-- 📝 **Memory Manager** - Dynamic memory allocation (malloc/free)
-- 📝 **Process Manager** - Multi-process support with PCB
-- 📝 **Scheduler** - Process scheduling algorithms (Round Robin, Priority, etc.)
+Students will extend kacchiOS by implementing:
+- 📝 **Memory Manager**
+- 📝 **Process Manager**
+- 📝 **Scheduler**
 
 ## 🚀 Quick Start
 
@@ -44,8 +44,8 @@ brew install qemu i686-elf-gcc
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/pastaOS.git
-cd pastaOS
+git clone https://github.com/yourusername/kacchiOS.git
+cd kacchiOS
 
 # Build the OS
 make clean
@@ -58,12 +58,12 @@ make run
 You should see:
 ```
 ========================================
-    pastaOS - Minimal Baremetal OS
+    kacchiOS - Minimal Baremetal OS
 ========================================
-Hello from pastaOS!
+Hello from kacchiOS!
 Running null process...
 
-pastaOS> 
+kacchiOS> 
 ```
 
 Type something and press Enter - it will echo back!
@@ -71,7 +71,7 @@ Type something and press Enter - it will echo back!
 ## 📁 Project Structure
 
 ```
-pastaOS/
+kacchiOS/
 ├── boot.S          # Bootloader entry point (Assembly)
 ├── kernel.c        # Main kernel (null process)
 ├── serial.c        # Serial port driver (COM1)
@@ -104,7 +104,7 @@ pastaOS/
 - [OSDev Wiki](https://wiki.osdev.org/) - Comprehensive OS development guide
 - [The Little OS Book](https://littleosbook.github.io/) - Practical OS development
 - [Operating Systems: Three Easy Pieces](https://pages.cs.wisc.edu/~remzi/OSTEP/) - OS concepts textbook
-- [XINU OS](https://xinu.cs.purdue.edu/) - Educational OS similar to pastaOS
+- [XINU OS](https://xinu.cs.purdue.edu/) - Educational OS similar to kacchiOS
 
 ### Related Topics
 
@@ -131,7 +131,7 @@ This project is licensed under the MIT License.
 
 ## 👨‍🏫 About
 
-pastaOS was created as an educational tool for teaching operating system concepts. It provides a minimal, working foundation that students can extend to learn core OS principles through hands-on implementation.
+kacchiOS was created as an educational tool for teaching operating system concepts. It provides a minimal, working foundation that students can extend to learn core OS principles through hands-on implementation.
 
 ## 🙏 Acknowledgments
 

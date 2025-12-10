@@ -1,4 +1,4 @@
-# Makefile for pastaOS
+# Makefile for kacchiOS
 CC = gcc
 LD = ld
 AS = as

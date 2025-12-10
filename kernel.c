@@ -15,14 +15,14 @@ void kmain(void) {
     /* Print welcome message */
     serial_puts("\n");
     serial_puts("========================================\n");
-    serial_puts("    pastaOS - Minimal Baremetal OS\n");
+    serial_puts("    kacchiOS - Minimal Baremetal OS\n");
     serial_puts("========================================\n");
-    serial_puts("Hello from pastaOS!\n");
+    serial_puts("Hello from kacchiOS!\n");
     serial_puts("Running null process...\n\n");
     
     /* Main loop - the "null process" */
     while (1) {
-        serial_puts("pastaOS> ");
+        serial_puts("kacchiOS> ");
         pos = 0;
         
         /* Read input line */
