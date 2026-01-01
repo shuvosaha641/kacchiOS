@@ -2,6 +2,7 @@
 #include "types.h"
 #include "serial.h"
 #include "string.h"
+#include "memory.h"
 
 #define MAX_INPUT 128
 
@@ -19,6 +20,9 @@ void kmain(void) {
     serial_puts("========================================\n");
     serial_puts("Hello from kacchiOS!\n");
     serial_puts("Running null process...\n\n");
+    /* Initialize memory subsystem and run allocator self-test */
+    memory_init();
+    stress_test_memory();
     
     /* Main loop - the "null process" */
     while (1) {
