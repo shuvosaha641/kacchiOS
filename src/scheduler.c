@@ -1,9 +1,9 @@
 #include "scheduler.h"
 #include "process.h"
-#include "io.h"
+#include "serial.h"
 
 /* Currently running process ID */
-int current_pid = -1;
+static int32_t current_pid = -1;
 
 /* ---------------------------------------------------
  * Initialize scheduler
@@ -16,15 +16,15 @@ void scheduler_init(void)
 /* ---------------------------------------------------
  * Find next READY process (Round Robin)
  * --------------------------------------------------- */
-static int find_next_ready(void)
+static int32_t find_next_ready(void)
 {
-    int start = current_pid;
+    int32_t start = current_pid;
 
-    for (int i = 0; i < MAX_PROCESS; i++)
+    for (int i = 0; i < MAX_PROCS; i++)
     {
-        start = (start + 1) % MAX_PROCESS;
+        start = (start + 1) % MAX_PROCS;
 
-        if (process_table[start].state == PROC_READY)
+        if (proc_get_state(start) == PR_READY)
         {
             return start;
         }
@@ -33,7 +33,7 @@ static int find_next_ready(void)
 }
 
 /* ---------------------------------------------------
- * Run scheduler loop
+ * Run scheduler loop (cooperative, no context switch)
  * --------------------------------------------------- */
 void scheduler_run(void)
 {
@@ -41,40 +41,44 @@ void scheduler_run(void)
 
     while (1)
     {
-        int next = find_next_ready();
+        int32_t next = find_next_ready();
 
         if (next < 0)
         {
             serial_puts("[Scheduler] No READY process. CPU idle.\n");
-            continue;
+            break; /* Exit if no processes */
         }
 
         current_pid = next;
-        process_table[next].state = PROC_RUNNING;
+        proc_set_state(next, PR_RUNNING);
 
-        serial_puts("[Scheduler] Running process ");
-        serial_putint(next);
+        serial_puts("[Scheduler] Running process PID ");
+        serial_putc('0' + (next % 10));
         serial_puts("\n");
 
-        /* Run the process function */
-        process_table[next].entry();
+        /* Get PCB and run the process function */
+        pcb_t *pcb = proc_get_pcb(next);
+        if (pcb && pcb->entry)
+        {
+            pcb->entry();
+        }
 
-        /* If process returns, it is terminated */
-        process_table[next].state = PROC_TERMINATED;
+        /* If process returns, terminate it */
+        proc_terminate(next);
 
-        serial_puts("[Scheduler] Process ");
-        serial_putint(next);
+        serial_puts("[Scheduler] Process PID ");
+        serial_putc('0' + (next % 10));
         serial_puts(" terminated\n");
     }
 }
 
 /* ---------------------------------------------------
- * Cooperative yield (optional)
+ * Cooperative yield (mark current as READY)
  * --------------------------------------------------- */
 void scheduler_yield(void)
 {
-    if (current_pid >= 0)
+    if (current_pid >= 0 && proc_is_alive(current_pid))
     {
-        process_table[current_pid].state = PROC_READY;
+        proc_set_state(current_pid, PR_READY);
     }
 }
