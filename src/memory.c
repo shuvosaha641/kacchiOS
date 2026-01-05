@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "serial.h"
 
 /*
  * Backing arrays for stack and heap.
@@ -29,15 +30,19 @@ static void merge_adjacent_free_segments(void)
 {
     HeapSegment *node = heap_head_node;
 
-    while (node && node->link) {
+    while (node && node->link)
+    {
         HeapSegment *next = node->link;
 
-        if (node->is_free && next->is_free) {
+        if (node->is_free && next->is_free)
+        {
             /* Fold 'next' into 'node' */
             node->length += sizeof(HeapSegment) + next->length;
             node->link = next->link;
             /* do NOT advance node; there might be another free segment */
-        } else {
+        }
+        else
+        {
             node = next;
         }
     }
@@ -67,11 +72,13 @@ void memory_init(void)
 
 void *stack_alloc(size_t size)
 {
-    if (size == 0) {
+    if (size == 0)
+    {
         return NULL;
     }
 
-    if (stack_marker + size > STACK_SIZE) {
+    if (stack_marker + size > STACK_SIZE)
+    {
         /* Out of stack space */
         return NULL;
     }
@@ -87,9 +94,12 @@ void stack_free(size_t size)
      * Linear stack model: we only support freeing from the top by size.
      * If caller asks to free more than we have, just reset.
      */
-    if (size >= stack_marker) {
+    if (size >= stack_marker)
+    {
         stack_marker = 0;
-    } else {
+    }
+    else
+    {
         stack_marker -= size;
     }
 }
@@ -98,7 +108,8 @@ void stack_free(size_t size)
 
 void *heap_alloc(size_t size)
 {
-    if (size == 0) {
+    if (size == 0)
+    {
         return NULL;
     }
 
@@ -111,12 +122,16 @@ void *heap_alloc(size_t size)
     /*
      * 2. Best-fit search: find the smallest free segment that can satisfy size.
      */
-    while (scan) {
-        if (scan->is_free && scan->length >= size) {
-            if (best == NULL || scan->length < best->length) {
+    while (scan)
+    {
+        if (scan->is_free && scan->length >= size)
+        {
+            if (best == NULL || scan->length < best->length)
+            {
                 best = scan;
             }
-            if (scan->length == size) {
+            if (scan->length == size)
+            {
                 /* Perfect fit, we can stop early */
                 break;
             }
@@ -124,7 +139,8 @@ void *heap_alloc(size_t size)
         scan = scan->link;
     }
 
-    if (best == NULL) {
+    if (best == NULL)
+    {
         /* No suitable free segment available */
         return NULL;
     }
@@ -136,7 +152,8 @@ void *heap_alloc(size_t size)
     const size_t min_payload = 4;
     const size_t min_remainder = sizeof(HeapSegment) + min_payload;
 
-    if (best->length >= size + min_remainder) {
+    if (best->length >= size + min_remainder)
+    {
         uint8_t *base = (uint8_t *)best;
         uint8_t *new_seg_addr = base + sizeof(HeapSegment) + size;
 
@@ -157,7 +174,8 @@ void *heap_alloc(size_t size)
 
 void heap_free(void *ptr)
 {
-    if (ptr == NULL) {
+    if (ptr == NULL)
+    {
         return;
     }
 
@@ -182,11 +200,14 @@ void stress_test_memory(void)
     /* Phase 1: Stack allocation / deallocation */
     serial_puts("Phase 1: testing stack allocator...\n");
     void *s1 = stack_alloc(100);
-    if (s1 != NULL) {
+    if (s1 != NULL)
+    {
         serial_puts("  -> 100 bytes allocated on stack.\n");
         stack_free(100);
         serial_puts("  -> 100 bytes released from stack. OK.\n");
-    } else {
+    }
+    else
+    {
         serial_puts("  -> Stack allocation failed unexpectedly.\n");
     }
 
@@ -197,7 +218,8 @@ void stress_test_memory(void)
     void *p2 = heap_alloc(512);
     void *p3 = heap_alloc(512);
 
-    if (!p1 || !p2 || !p3) {
+    if (!p1 || !p2 || !p3)
+    {
         serial_puts("  -> Unable to allocate 3 × 512-byte heap blocks.\n");
         return;
     }
@@ -210,10 +232,13 @@ void stress_test_memory(void)
 
     /* Phase 3: Check if coalescing created a larger free region */
     void *big = heap_alloc(1024);
-    if (big) {
+    if (big)
+    {
         serial_puts("  -> SUCCESS: 1024-byte allocation succeeded after merge.\n");
         heap_free(big);
-    } else {
+    }
+    else
+    {
         serial_puts("  -> FAILURE: Heap still fragmented; 1024-byte block not available.\n");
     }
 
