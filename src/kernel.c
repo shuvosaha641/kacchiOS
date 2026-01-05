@@ -244,6 +244,9 @@ void kmain(void)
                 serial_puts("  create       - Create a new process\n");
                 serial_puts("  kill <pid>   - Terminate process (e.g., kill 1)\n");
                 serial_puts("  run          - Execute scheduler\n");
+                serial_puts("\n=== IPC COMMUNICATION ===\n");
+                serial_puts("  send <pid> <msg> - Send message to process\n");
+                serial_puts("  recv <pid>       - Receive message from process\n");
                 serial_puts("\n=== UTILITIES ===\n");
                 serial_puts("  version      - Show OS version\n");
                 serial_puts("  clear        - Clear screen\n");
@@ -382,6 +385,81 @@ void kmain(void)
                 serial_puts("Starting scheduler...\n");
                 scheduler_run();
                 serial_puts("✓ Scheduler completed\n");
+            }
+            else if (string_starts_with(input, "send"))
+            {
+                int pid = -1;
+                int msg_start = -1;
+
+                /* Parse: send <pid> <msg> */
+                int i = 5; /* skip "send " */
+                int num = 0;
+                while (i < pos && input[i] >= '0' && input[i] <= '9')
+                {
+                    num = num * 10 + (input[i] - '0');
+                    i++;
+                }
+                pid = num;
+
+                /* Skip space */
+                while (i < pos && input[i] == ' ')
+                    i++;
+                msg_start = i;
+
+                if (msg_start < pos)
+                {
+                    char msg[33];
+                    int j = 0;
+                    while (j < pos - msg_start && j < 32)
+                    {
+                        msg[j] = input[msg_start + j];
+                        j++;
+                    }
+                    msg[j] = '\0';
+
+                    if (proc_send(pid, msg) == 0)
+                    {
+                        serial_puts("✓ Message sent to PID ");
+                        char buf[8];
+                        buf[0] = '0' + (pid / 10);
+                        buf[1] = '0' + (pid % 10);
+                        buf[2] = '\0';
+                        serial_puts(buf);
+                        serial_puts("\n");
+                    }
+                    else
+                        serial_puts("✗ Send failed\n");
+                }
+                else
+                    serial_puts("Usage: send <pid> <message>\n");
+            }
+            else if (string_starts_with(input, "recv"))
+            {
+                int pid = 0;
+                if (pos > 5)
+                {
+                    int parsed = 0;
+                    for (int i = 5; i < pos && input[i] >= '0' && input[i] <= '9'; i++)
+                        parsed = parsed * 10 + (input[i] - '0');
+                    if (parsed >= 0)
+                        pid = parsed;
+                }
+
+                char msg[33];
+                if (proc_recv(pid, msg) == 0)
+                {
+                    serial_puts("✓ Message from PID ");
+                    char buf[8];
+                    buf[0] = '0' + (pid / 10);
+                    buf[1] = '0' + (pid % 10);
+                    buf[2] = '\0';
+                    serial_puts(buf);
+                    serial_puts(": ");
+                    serial_puts(msg);
+                    serial_puts("\n");
+                }
+                else
+                    serial_puts("✗ No message or invalid PID\n");
             }
             else
             {
