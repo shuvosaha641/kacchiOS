@@ -3,14 +3,10 @@
 
 #include "types.h"
 
-/*
- * KacchiOS memory layout configuration.
- * You can tweak these if your RAM size changes.
- */
+
 #define KACCHI_STACK_BYTES 4096
 #define KACCHI_HEAP_BYTES  8192
 
-/* Keep the original macro names for compatibility */
 #define STACK_SIZE KACCHI_STACK_BYTES
 #define HEAP_SIZE  KACCHI_HEAP_BYTES
 
