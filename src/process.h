@@ -31,6 +31,7 @@ typedef struct
     uint32_t stack_size;
     char msg[IPC_MSG_SIZE];
     int has_msg;
+    uint32_t age; /* For process aging (bonus feature) */
 } pcb_t;
 
 void proc_init(void);

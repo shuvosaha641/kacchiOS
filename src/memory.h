@@ -3,12 +3,11 @@
 
 #include "types.h"
 
-
 #define KACCHI_STACK_BYTES 4096
-#define KACCHI_HEAP_BYTES  8192
+#define KACCHI_HEAP_BYTES 8192
 
 #define STACK_SIZE KACCHI_STACK_BYTES
-#define HEAP_SIZE  KACCHI_HEAP_BYTES
+#define HEAP_SIZE KACCHI_HEAP_BYTES
 
 /*
  * Backing storage for the "kernel stack" and "kernel heap".
@@ -19,20 +18,20 @@ extern uint8_t g_stack_store[STACK_SIZE];
 extern uint8_t g_heap_store[HEAP_SIZE];
 
 #define stack g_stack_store
-#define heap  g_heap_store
+#define heap g_heap_store
 
 /*
  * Heap segment descriptor.
  * Internally the allocator treats the heap as a linked list
  * of these segments.
  */
-typedef struct HeapSegment {
-    size_t        length;   /* size of the usable payload in bytes */
-    int           is_free;  /* non-zero if this segment is free */
+typedef struct HeapSegment
+{
+    size_t length;            /* size of the usable payload in bytes */
+    int is_free;              /* non-zero if this segment is free */
     struct HeapSegment *link; /* next segment in the heap list */
 } HeapSegment;
 
-/* For compatibility with any existing code using MemBlock */
 typedef HeapSegment MemBlock;
 
 /* ----------------------------------------------------------------------------
@@ -45,11 +44,11 @@ void memory_init(void);
 
 /* Simple linear stack allocator / deallocator (LIFO style). */
 void *stack_alloc(size_t size);
-void  stack_free(size_t size);
+void stack_free(size_t size);
 
 /* Best-fit heap allocator with splitting and coalescing. */
 void *heap_alloc(size_t size);
-void  heap_free(void *ptr);
+void heap_free(void *ptr);
 
 /* Optional diagnostic routine to exercise the allocator. */
 void stress_test_memory(void);

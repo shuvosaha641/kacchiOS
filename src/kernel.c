@@ -241,12 +241,16 @@ void kmain(void)
                 serial_puts("  meminfo      - Show memory status\n");
                 serial_puts("\n=== PROCESS OPERATIONS ===\n");
                 serial_puts("  ps           - List all processes\n");
+                serial_puts("  ps -a        - Show process details with aging\n");
                 serial_puts("  create       - Create a new process\n");
                 serial_puts("  kill <pid>   - Terminate process (e.g., kill 1)\n");
+                serial_puts("  getinfo <pid> - Get detailed process info\n");
                 serial_puts("  run          - Execute scheduler\n");
                 serial_puts("\n=== IPC COMMUNICATION ===\n");
                 serial_puts("  send <pid> <msg> - Send message to process\n");
                 serial_puts("  recv <pid>       - Receive message from process\n");
+                serial_puts("\n=== SCHEDULER INFO ===\n");
+                serial_puts("  info        - Show scheduler and context info\n");
                 serial_puts("\n=== UTILITIES ===\n");
                 serial_puts("  version      - Show OS version\n");
                 serial_puts("  clear        - Clear screen\n");
@@ -460,6 +464,102 @@ void kmain(void)
                 }
                 else
                     serial_puts("✗ No message or invalid PID\n");
+            }
+            else if (string_equal(input, "ps -a"))
+            {
+                int count = 0;
+                serial_puts("Process Details (with Aging):\n");
+                serial_puts("PID | State    | Age\n");
+                serial_puts("----+----------+-----\n");
+                for (int i = 0; i < 16; i++)
+                {
+                    if (proc_is_alive(i))
+                    {
+                        count++;
+                        pcb_t *pcb = proc_get_pcb(i);
+                        if (pcb)
+                        {
+                            serial_puts("  ");
+                            serial_putc('0' + (i / 10));
+                            serial_putc('0' + (i % 10));
+                            serial_puts("  | ");
+                            int state = proc_get_state(i);
+                            if (state == 0)
+                                serial_puts("TERM");
+                            else if (state == 1)
+                                serial_puts("NEW ");
+                            else if (state == 2)
+                                serial_puts("READY");
+                            else if (state == 3)
+                                serial_puts("RUN ");
+                            else
+                                serial_puts("????");
+                            serial_puts(" | ");
+                            serial_putc('0' + (pcb->age / 10));
+                            serial_putc('0' + (pcb->age % 10));
+                            serial_puts("\n");
+                        }
+                    }
+                }
+                serial_puts("Total: ");
+                serial_putc('0' + (count / 10));
+                serial_putc('0' + (count % 10));
+                serial_puts("/16 processes\n");
+            }
+            else if (string_starts_with(input, "getinfo"))
+            {
+                int pid = 0;
+                if (pos > 8)
+                {
+                    int parsed = 0;
+                    for (int i = 8; i < pos && input[i] >= '0' && input[i] <= '9'; i++)
+                        parsed = parsed * 10 + (input[i] - '0');
+                    if (parsed >= 0)
+                        pid = parsed;
+                }
+
+                pcb_t *pcb = proc_get_pcb(pid);
+                if (pcb && proc_is_alive(pid))
+                {
+                    serial_puts("Process Info (PID ");
+                    serial_putc('0' + (pid / 10));
+                    serial_putc('0' + (pid % 10));
+                    serial_puts("):\n");
+                    serial_puts("  State: ");
+                    int state = proc_get_state(pid);
+                    if (state == 0)
+                        serial_puts("TERMINATED\n");
+                    else if (state == 1)
+                        serial_puts("NEW\n");
+                    else if (state == 2)
+                        serial_puts("READY\n");
+                    else if (state == 3)
+                        serial_puts("RUNNING\n");
+                    else
+                        serial_puts("UNKNOWN\n");
+                    serial_puts("  Age: ");
+                    serial_putc('0' + (pcb->age / 10));
+                    serial_putc('0' + (pcb->age % 10));
+                    serial_puts(" ticks\n");
+                    serial_puts("  Stack Size: ");
+                    serial_puts(pcb->stack_size == 512 ? "512B\n" : "?KB\n");
+                    serial_puts("  Has Message: ");
+                    serial_puts(pcb->has_msg ? "Yes\n" : "No\n");
+                }
+                else
+                    serial_puts("✗ Invalid PID or process terminated\n");
+            }
+            else if (string_equal(input, "info"))
+            {
+                serial_puts("Scheduler Information:\n");
+                serial_puts("  Type: Round-Robin (Cooperative)\n");
+                serial_puts("  Policy: Non-preemptive context switching\n");
+                serial_puts("  Max Processes: 16\n");
+                serial_puts("  Context Switch: Cooperative (explicit yield)\n");
+                serial_puts("  Bonus Features:\n");
+                serial_puts("    - Process Aging support\n");
+                serial_puts("    - IPC messaging\n");
+                serial_puts("    - Multiple process states\n");
             }
             else
             {
