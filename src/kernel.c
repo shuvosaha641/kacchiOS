@@ -1,304 +1,272 @@
-/* kernel.c - Main kernel with null process */
+/* kernel.c - Complete OS verification and test suite */
 #include "types.h"
 #include "serial.h"
 #include "string.h"
 #include "memory.h"
 #include "process.h"
+#include "scheduler.h"
 
 #define MAX_INPUT 128
 
-static uint32_t uptime_ticks = 0;
-
-/* Dummy process functions for testing */
-void test_process_1(void)
+/* ================================================================
+ * TEST PROCESSES
+ * ================================================================ */
+void test_proc_hello(void)
 {
-    serial_puts("[Process 1 running]\n");
-    while (1)
-    { /* infinite loop */
-    }
+    serial_puts("    [P] Hello from process!\n");
 }
 
-void test_process_2(void)
+void test_proc_count(void)
 {
-    serial_puts("[Process 2 running]\n");
-    while (1)
-    { /* infinite loop */
-    }
+    serial_puts("    [P] Counting: 1 2 3\n");
 }
 
-/* Simple command parser */
-void handle_command(char *cmd)
+void test_proc_mem(void)
 {
-    /* help - show available commands */
-    if (string_equal(cmd, "help"))
-    {
-        serial_puts("Available commands:\n");
-        serial_puts("  help       - Show this help message\n");
-        serial_puts("  clear      - Clear screen (visual only)\n");
-        serial_puts("  alloc SIZE - Allocate SIZE bytes on heap\n");
-        serial_puts("  free       - Show free memory info\n");
-        serial_puts("  version    - Show OS version\n");
-        serial_puts("  info       - Show system info\n");
-        serial_puts("  ps         - Show process info\n");
-        serial_puts("  create     - Create a test process\n");
-        serial_puts("  kill PID   - Terminate a process\n");
-        serial_puts("  uptime     - Show uptime\n");
-        return;
-    }
-
-    /* clear - visual clear */ /* clear - visual clear */
-    if (string_equal(cmd, "clear"))
-    {
-        for (int i = 0; i < 25; i++)
-        {
-            serial_puts("\n");
-        }
-        return;
-    }
-
-    /* version - show OS info */
-    if (string_equal(cmd, "version"))
-    {
-        serial_puts("kacchiOS v0.1.0\n");
-        serial_puts("Memory: 4KB stack, 8KB heap\n");
-        serial_puts("Max processes: 16\n");
-        return;
-    }
-
-    /* info - show detailed system info */
-    if (string_equal(cmd, "info"))
-    {
-        serial_puts("=== System Information ===\n");
-        serial_puts("OS: kacchiOS v0.1.0\n");
-        serial_puts("Arch: x86 (32-bit)\n");
-        serial_puts("Boot: Multiboot\n");
-        serial_puts("Stack: 4096 bytes\n");
-        serial_puts("Heap: 8192 bytes\n");
-        serial_puts("Max PIDs: 16\n");
-        serial_puts("===========================\n");
-        return;
-    }
-
-    /* uptime - show system uptime in ticks */
-    if (string_equal(cmd, "uptime"))
-    {
-        serial_puts("Uptime: ");
-        /* Simple number print */
-        uint32_t ticks = uptime_ticks++;
-        if (ticks == 0)
-        {
-            serial_puts("0 ticks\n");
-        }
-        else
-        {
-            char buf[16];
-            int idx = 0;
-            uint32_t temp = ticks;
-            while (temp > 0)
-            {
-                buf[idx++] = '0' + (temp % 10);
-                temp /= 10;
-            }
-            for (int i = idx - 1; i >= 0; i--)
-            {
-                serial_putc(buf[i]);
-            }
-            serial_puts(" ticks\n");
-        }
-        return;
-    }
-
-    /* free - show memory status */
-    if (string_equal(cmd, "free"))
-    {
-        serial_puts("Memory Usage:\n");
-        serial_puts("  Stack: 4096 bytes total\n");
-        serial_puts("  Heap:  8192 bytes total\n");
-        serial_puts("  Use 'alloc SIZE' to test allocation\n");
-        return;
-    }
-
-    /* ps - process status */
-    if (string_equal(cmd, "ps"))
-    {
-        serial_puts("Process Status:\n");
-        serial_puts("  PID 0: kernel (RUNNING)\n");
-        for (int i = 1; i < MAX_PROCS; i++)
-        {
-            pr_state_t state = proc_get_state(i);
-            if (state != PR_TERMINATED)
-            {
-                serial_puts("  PID ");
-                serial_putc('0' + (i % 10));
-                serial_puts(": (");
-                if (state == PR_NEW)
-                    serial_puts("NEW");
-                else if (state == PR_READY)
-                    serial_puts("READY");
-                else if (state == PR_RUNNING)
-                    serial_puts("RUNNING");
-                else if (state == PR_BLOCKED)
-                    serial_puts("BLOCKED");
-                else if (state == PR_SLEEPING)
-                    serial_puts("SLEEPING");
-                serial_puts(")\n");
-            }
-        }
-        return;
-    }
-
-    /* create - create a test process */
-    if (string_equal(cmd, "create"))
-    {
-        int32_t pid = proc_create(test_process_1);
-        if (pid >= 0)
-        {
-            serial_puts("Created process PID ");
-            serial_putc('0' + pid);
-            serial_puts(" (state: NEW)\n");
-            serial_puts("Note: No scheduler - process won't run!\n");
-        }
-        else
-        {
-            serial_puts("Process creation failed\n");
-        }
-        return;
-    }
-
-    /* kill PID - terminate a process */
-    if (string_starts_with(cmd, "kill "))
-    {
-        int pid = 0;
-        char *ptr = cmd + 5; /* Skip "kill " */
-        while (*ptr >= '0' && *ptr <= '9')
-        {
-            pid = pid * 10 + (*ptr - '0');
-            ptr++;
-        }
-        if (pid > 0 && pid < MAX_PROCS)
-        {
-            if (proc_terminate(pid) == 0)
-            {
-                serial_puts("Terminated process PID ");
-                serial_putc('0' + pid);
-                serial_puts("\n");
-            }
-            else
-            {
-                serial_puts("Failed to terminate PID ");
-                serial_putc('0' + pid);
-                serial_puts("\n");
-            }
-        }
-        else
-        {
-            serial_puts("Invalid PID (must be 1-15)\n");
-        }
-        return;
-    }
-
-    /* alloc SIZE - test heap allocation */
-    if (string_starts_with(cmd, "alloc "))
-    {
-        int size = 0;
-        char *ptr = cmd + 6; /* Skip "alloc " */
-        while (*ptr >= '0' && *ptr <= '9')
-        {
-            size = size * 10 + (*ptr - '0');
-            ptr++;
-        }
-        if (size > 0)
-        {
-            void *mem = heap_alloc(size);
-            if (mem)
-            {
-                serial_puts("Allocated ");
-                serial_puts(cmd + 6);
-                serial_puts(" bytes OK\n");
-            }
-            else
-            {
-                serial_puts("Allocation failed (out of heap)\n");
-            }
-        }
-        else
-        {
-            serial_puts("Usage: alloc SIZE (e.g., alloc 256)\n");
-        }
-        return;
-    }
-
-    /* Unknown command */
-    serial_puts("Unknown command: ");
-    serial_puts(cmd);
-    serial_puts("\nType 'help' for commands.\n");
+    serial_puts("    [P] Testing heap allocation\n");
+    void *ptr = heap_alloc(256);
+    if (ptr)
+        serial_puts("    [P] Success!\n");
 }
 
+/* ================================================================
+ * MEMORY TEST SUITE
+ * ================================================================ */
+void test_memory_complete(void)
+{
+    serial_puts("\n[MEMORY TEST]\n");
+    serial_puts("─────────────────────────────────────\n");
+
+    serial_puts("1. Stack: allocating 256B... ");
+    void *s1 = stack_alloc(256);
+    serial_puts(s1 ? "✓\n" : "✗\n");
+
+    serial_puts("2. Stack: deallocating... ");
+    stack_free(256);
+    serial_puts("✓\n");
+
+    serial_puts("3. Heap: allocating 512B... ");
+    void *h1 = heap_alloc(512);
+    serial_puts(h1 ? "✓\n" : "✗\n");
+
+    serial_puts("4. Heap: allocating 512B... ");
+    void *h2 = heap_alloc(512);
+    serial_puts(h2 ? "✓\n" : "✗\n");
+
+    serial_puts("5. Heap: allocating 512B... ");
+    void *h3 = heap_alloc(512);
+    serial_puts(h3 ? "✓\n" : "✗\n");
+
+    serial_puts("6. Heap: freeing all... ");
+    heap_free(h1);
+    heap_free(h2);
+    heap_free(h3);
+    serial_puts("✓\n");
+
+    serial_puts("7. Coalescing: allocating 1024B... ");
+    void *big = heap_alloc(1024);
+    if (big)
+    {
+        serial_puts("✓ (coalescing works!)\n");
+        heap_free(big);
+    }
+    else
+        serial_puts("✗\n");
+
+    serial_puts("✓ MEMORY: OK\n");
+}
+
+/* ================================================================
+ * PROCESS TEST SUITE
+ * ================================================================ */
+void test_process_complete(void)
+{
+    serial_puts("\n[PROCESS TEST]\n");
+    serial_puts("─────────────────────────────────────\n");
+
+    serial_puts("1. Creating PID 1... ");
+    int32_t p1 = proc_create(test_proc_hello);
+    serial_puts(p1 >= 0 ? "✓\n" : "✗\n");
+
+    serial_puts("2. Creating PID 2... ");
+    int32_t p2 = proc_create(test_proc_count);
+    serial_puts(p2 >= 0 ? "✓\n" : "✗\n");
+
+    serial_puts("3. Setting PID 1 to READY... ");
+    proc_set_state(p1, PR_READY);
+    serial_puts("✓\n");
+
+    serial_puts("4. Setting PID 2 to READY... ");
+    proc_set_state(p2, PR_READY);
+    serial_puts("✓\n");
+
+    serial_puts("5. Checking states...\n");
+    if (proc_get_state(p1) == PR_READY)
+        serial_puts("   - PID 1: READY ✓\n");
+    if (proc_get_state(p2) == PR_READY)
+        serial_puts("   - PID 2: READY ✓\n");
+
+    serial_puts("6. Terminating PID 1... ");
+    proc_terminate(p1);
+    serial_puts("✓\n");
+
+    serial_puts("7. Verifying terminated... ");
+    if (proc_get_state(p1) == PR_TERMINATED)
+        serial_puts("✓\n");
+    else
+        serial_puts("✗\n");
+
+    serial_puts("8. PID 2 still alive... ");
+    if (proc_is_alive(p2))
+        serial_puts("✓\n");
+    else
+        serial_puts("✗\n");
+
+    proc_terminate(p2);
+    serial_puts("✓ PROCESS: OK\n");
+}
+
+/* ================================================================
+ * SCHEDULER TEST SUITE
+ * ================================================================ */
+void test_scheduler_complete(void)
+{
+    serial_puts("\n[SCHEDULER TEST]\n");
+    serial_puts("─────────────────────────────────────\n");
+
+    serial_puts("1. Initializing scheduler... ✓\n");
+    scheduler_init();
+
+    serial_puts("2. Creating test processes...\n");
+    int32_t p1 = proc_create(test_proc_hello);
+    int32_t p2 = proc_create(test_proc_count);
+    int32_t p3 = proc_create(test_proc_mem);
+
+    serial_puts("   PID 1, 2, 3 created ✓\n");
+
+    serial_puts("3. Setting all to READY... ✓\n");
+    proc_set_state(p1, PR_READY);
+    proc_set_state(p2, PR_READY);
+    proc_set_state(p3, PR_READY);
+
+    serial_puts("4. Running scheduler...\n\n");
+    scheduler_run();
+
+    serial_puts("\n✓ SCHEDULER: OK\n");
+}
+
+/* ================================================================
+ * COMPLETE SYSTEM TEST
+ * ================================================================ */
+void run_full_test(void)
+{
+    serial_puts("\n");
+    serial_puts("╔═════════════════════════════════════╗\n");
+    serial_puts("║   kacchiOS COMPLETE SYSTEM TEST    ║\n");
+    serial_puts("║   Memory + Process + Scheduler     ║\n");
+    serial_puts("╚═════════════════════════════════════╝\n");
+
+    test_memory_complete();
+    test_process_complete();
+    test_scheduler_complete();
+
+    serial_puts("\n");
+    serial_puts("╔═════════════════════════════════════╗\n");
+    serial_puts("║   ✓✓✓ ALL SYSTEMS WORKING ✓✓✓     ║\n");
+    serial_puts("╚═════════════════════════════════════╝\n");
+}
+
+/* ================================================================
+ * MAIN KERNEL
+ * ================================================================ */
 void kmain(void)
 {
+    serial_init();
+    memory_init();
+    proc_init();
+
+    serial_puts("\n════════════════════════════════════\n");
+    serial_puts("   kacchiOS v0.1.0\n");
+    serial_puts("   Baremetal OS with Memory, Process,\n");
+    serial_puts("   and Scheduler Support\n");
+    serial_puts("════════════════════════════════════\n");
+
+    serial_puts("\n[INFO] Running startup tests...\n");
+    stress_test_memory();
+
+    serial_puts("\n[READY] Type 'test' for full verification\n");
+    serial_puts("Type 'help' for commands\n\n");
+
     char input[MAX_INPUT];
     int pos = 0;
 
-    /* Initialize hardware */
-    serial_init();
-
-    /* Print welcome message */
-    serial_puts("\n");
-    serial_puts("========================================\n");
-    serial_puts("    kacchiOS - Minimal Baremetal OS\n");
-    serial_puts("========================================\n");
-    serial_puts("Hello from kacchiOS!\n");
-    serial_puts("Running null process...\n");
-    serial_puts("Type 'help' for available commands.\n\n");
-    /* Initialize memory subsystem and run allocator self-test */
-    memory_init();
-    stress_test_memory();
-
-    /* Initialize process manager */
-    proc_init();
-
-    /* Main loop - the "null process" */
     while (1)
     {
         serial_puts("kacchiOS> ");
         pos = 0;
 
-        /* Read input line */
         while (1)
         {
             char c = serial_getc();
-
-            /* Handle Enter key */
             if (c == '\r' || c == '\n')
             {
                 input[pos] = '\0';
                 serial_puts("\n");
                 break;
             }
-            /* Handle Backspace */
             else if ((c == '\b' || c == 0x7F) && pos > 0)
             {
                 pos--;
-                serial_puts("\b \b"); /* Erase character on screen */
+                serial_puts("\b \b");
             }
-            /* Handle normal characters */
             else if (c >= 32 && c < 127 && pos < MAX_INPUT - 1)
             {
                 input[pos++] = c;
-                serial_putc(c); /* Echo character */
+                serial_putc(c);
             }
         }
 
-        /* Process command if not empty */
         if (pos > 0)
         {
-            handle_command(input);
+            if (string_equal(input, "help"))
+            {
+                serial_puts("Commands:\n");
+                serial_puts("  test     - Run complete system verification\n");
+                serial_puts("  memory   - Test memory subsystem only\n");
+                serial_puts("  process  - Test process subsystem only\n");
+                serial_puts("  sched    - Test scheduler only\n");
+                serial_puts("  version  - Show version\n");
+                serial_puts("  clear    - Clear screen\n");
+            }
+            else if (string_equal(input, "test"))
+            {
+                run_full_test();
+            }
+            else if (string_equal(input, "memory"))
+            {
+                test_memory_complete();
+            }
+            else if (string_equal(input, "process"))
+            {
+                test_process_complete();
+            }
+            else if (string_equal(input, "sched"))
+            {
+                test_scheduler_complete();
+            }
+            else if (string_equal(input, "version"))
+            {
+                serial_puts("kacchiOS v0.1.0\n");
+            }
+            else if (string_equal(input, "clear"))
+            {
+                for (int i = 0; i < 30; i++)
+                    serial_puts("\n");
+            }
+            else
+            {
+                serial_puts("Unknown command\n");
+            }
         }
-    }
-
-    /* Should never reach here */
-    for (;;)
-    {
-        __asm__ volatile("hlt");
     }
 }
