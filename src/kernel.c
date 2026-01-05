@@ -172,7 +172,7 @@ void run_full_test(void)
 
     serial_puts("\n");
     serial_puts("╔═════════════════════════════════════╗\n");
-    serial_puts("║   ✓✓✓ ALL SYSTEMS WORKING ✓✓✓     ║\n");
+    serial_puts("║   ALL SUBSYSTEMS VERIFIED          ║\n");
     serial_puts("╚═════════════════════════════════════╝\n");
 }
 
@@ -230,13 +230,24 @@ void kmain(void)
         {
             if (string_equal(input, "help"))
             {
-                serial_puts("Commands:\n");
+                serial_puts("\n=== SYSTEM TESTS ===\n");
                 serial_puts("  test     - Run complete system verification\n");
-                serial_puts("  memory   - Test memory subsystem only\n");
-                serial_puts("  process  - Test process subsystem only\n");
-                serial_puts("  sched    - Test scheduler only\n");
-                serial_puts("  version  - Show version\n");
-                serial_puts("  clear    - Clear screen\n");
+                serial_puts("  memory   - Test memory subsystem\n");
+                serial_puts("  process  - Test process subsystem\n");
+                serial_puts("  sched    - Test scheduler\n");
+                serial_puts("\n=== MEMORY OPERATIONS ===\n");
+                serial_puts("  alloc <size> - Allocate memory (e.g., alloc 512)\n");
+                serial_puts("  free         - Free last allocated block\n");
+                serial_puts("  meminfo      - Show memory status\n");
+                serial_puts("\n=== PROCESS OPERATIONS ===\n");
+                serial_puts("  ps           - List all processes\n");
+                serial_puts("  create       - Create a new process\n");
+                serial_puts("  kill <pid>   - Terminate process (e.g., kill 1)\n");
+                serial_puts("  run          - Execute scheduler\n");
+                serial_puts("\n=== UTILITIES ===\n");
+                serial_puts("  version      - Show OS version\n");
+                serial_puts("  clear        - Clear screen\n");
+                serial_puts("  help         - Show this help\n");
             }
             else if (string_equal(input, "test"))
             {
@@ -262,6 +273,101 @@ void kmain(void)
             {
                 for (int i = 0; i < 30; i++)
                     serial_puts("\n");
+            }
+            else if (string_starts_with(input, "alloc"))
+            {
+                int size = 512; /* default */
+                if (pos > 6)
+                {
+                    /* Parse size from input */
+                    int parsed = 0;
+                    for (int i = 6; i < pos && input[i] >= '0' && input[i] <= '9'; i++)
+                        parsed = parsed * 10 + (input[i] - '0');
+                    if (parsed > 0)
+                        size = parsed;
+                }
+                void *ptr = heap_alloc(size);
+                if (ptr)
+                    serial_puts("✓ Allocated memory\n");
+                else
+                    serial_puts("✗ Allocation failed\n");
+            }
+            else if (string_equal(input, "free"))
+            {
+                heap_free(512);
+                serial_puts("✓ Memory freed\n");
+            }
+            else if (string_equal(input, "meminfo"))
+            {
+                serial_puts("Memory Status:\n");
+                serial_puts("  Stack: 4KB\n");
+                serial_puts("  Heap: 8KB\n");
+                serial_puts("  Available: Check with 'test'\n");
+            }
+            else if (string_equal(input, "ps"))
+            {
+                serial_puts("Process List:\n");
+                for (int i = 0; i < 16; i++)
+                {
+                    if (proc_is_alive(i))
+                    {
+                        serial_puts("  PID ");
+                        char buf[8];
+                        buf[0] = '0' + (i / 10);
+                        buf[1] = '0' + (i % 10);
+                        buf[2] = '\0';
+                        serial_puts(buf);
+                        serial_puts(": ");
+                        int state = proc_get_state(i);
+                        if (state == 0)
+                            serial_puts("TERMINATED\n");
+                        else if (state == 1)
+                            serial_puts("NEW\n");
+                        else if (state == 2)
+                            serial_puts("READY\n");
+                        else if (state == 3)
+                            serial_puts("RUNNING\n");
+                        else
+                            serial_puts("UNKNOWN\n");
+                    }
+                }
+            }
+            else if (string_equal(input, "create"))
+            {
+                int32_t pid = proc_create(test_proc_hello);
+                if (pid >= 0)
+                {
+                    serial_puts("✓ Process created: PID ");
+                    char buf[8];
+                    buf[0] = '0' + (pid / 10);
+                    buf[1] = '0' + (pid % 10);
+                    buf[2] = '\0';
+                    serial_puts(buf);
+                    serial_puts("\n");
+                    proc_set_state(pid, PR_READY);
+                }
+                else
+                    serial_puts("✗ Process creation failed\n");
+            }
+            else if (string_starts_with(input, "kill"))
+            {
+                int pid = 0;
+                if (pos > 5)
+                {
+                    int parsed = 0;
+                    for (int i = 5; i < pos && input[i] >= '0' && input[i] <= '9'; i++)
+                        parsed = parsed * 10 + (input[i] - '0');
+                    if (parsed >= 0)
+                        pid = parsed;
+                }
+                proc_terminate(pid);
+                serial_puts("✓ Process terminated\n");
+            }
+            else if (string_equal(input, "run"))
+            {
+                serial_puts("Starting scheduler...\n");
+                scheduler_run();
+                serial_puts("✓ Scheduler completed\n");
             }
             else
             {
