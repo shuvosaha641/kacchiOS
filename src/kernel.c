@@ -9,6 +9,23 @@
 
 static uint32_t uptime_ticks = 0;
 
+/* Dummy process functions for testing */
+void test_process_1(void)
+{
+    serial_puts("[Process 1 running]\n");
+    while (1)
+    { /* infinite loop */
+    }
+}
+
+void test_process_2(void)
+{
+    serial_puts("[Process 2 running]\n");
+    while (1)
+    { /* infinite loop */
+    }
+}
+
 /* Simple command parser */
 void handle_command(char *cmd)
 {
@@ -23,11 +40,13 @@ void handle_command(char *cmd)
         serial_puts("  version    - Show OS version\n");
         serial_puts("  info       - Show system info\n");
         serial_puts("  ps         - Show process info\n");
+        serial_puts("  create     - Create a test process\n");
+        serial_puts("  kill PID   - Terminate a process\n");
         serial_puts("  uptime     - Show uptime\n");
         return;
     }
 
-    /* clear - visual clear */
+    /* clear - visual clear */ /* clear - visual clear */
     if (string_equal(cmd, "clear"))
     {
         for (int i = 0; i < 25; i++)
@@ -104,13 +123,13 @@ void handle_command(char *cmd)
     {
         serial_puts("Process Status:\n");
         serial_puts("  PID 0: kernel (RUNNING)\n");
-        for (int i = 1; i < 5; i++)
+        for (int i = 1; i < MAX_PROCS; i++)
         {
             pr_state_t state = proc_get_state(i);
             if (state != PR_TERMINATED)
             {
                 serial_puts("  PID ");
-                serial_putc('0' + i);
+                serial_putc('0' + (i % 10));
                 serial_puts(": (");
                 if (state == PR_NEW)
                     serial_puts("NEW");
@@ -124,6 +143,56 @@ void handle_command(char *cmd)
                     serial_puts("SLEEPING");
                 serial_puts(")\n");
             }
+        }
+        return;
+    }
+
+    /* create - create a test process */
+    if (string_equal(cmd, "create"))
+    {
+        int32_t pid = proc_create(test_process_1);
+        if (pid >= 0)
+        {
+            serial_puts("Created process PID ");
+            serial_putc('0' + pid);
+            serial_puts(" (state: NEW)\n");
+            serial_puts("Note: No scheduler - process won't run!\n");
+        }
+        else
+        {
+            serial_puts("Process creation failed\n");
+        }
+        return;
+    }
+
+    /* kill PID - terminate a process */
+    if (string_starts_with(cmd, "kill "))
+    {
+        int pid = 0;
+        char *ptr = cmd + 5; /* Skip "kill " */
+        while (*ptr >= '0' && *ptr <= '9')
+        {
+            pid = pid * 10 + (*ptr - '0');
+            ptr++;
+        }
+        if (pid > 0 && pid < MAX_PROCS)
+        {
+            if (proc_terminate(pid) == 0)
+            {
+                serial_puts("Terminated process PID ");
+                serial_putc('0' + pid);
+                serial_puts("\n");
+            }
+            else
+            {
+                serial_puts("Failed to terminate PID ");
+                serial_putc('0' + pid);
+                serial_puts("\n");
+            }
+        }
+        else
+        {
+            serial_puts("Invalid PID (must be 1-15)\n");
         }
         return;
     }
