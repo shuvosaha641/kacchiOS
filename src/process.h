@@ -5,7 +5,7 @@
 
 /* Process Manager Config */
 #define MAX_PROCS 16
-#define PROC_STACK_SIZE 4096
+#define PROC_STACK_SIZE 512 /* Reduced from 4096 to allow more processes */
 #define IPC_MSG_SIZE 32
 
 /* process states */

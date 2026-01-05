@@ -306,11 +306,13 @@ void kmain(void)
             }
             else if (string_equal(input, "ps"))
             {
+                int count = 0;
                 serial_puts("Process List:\n");
                 for (int i = 0; i < 16; i++)
                 {
                     if (proc_is_alive(i))
                     {
+                        count++;
                         serial_puts("  PID ");
                         char buf[8];
                         buf[0] = '0' + (i / 10);
@@ -331,6 +333,13 @@ void kmain(void)
                             serial_puts("UNKNOWN\n");
                     }
                 }
+                serial_puts("Total: ");
+                char countbuf[8];
+                countbuf[0] = '0' + (count / 10);
+                countbuf[1] = '0' + (count % 10);
+                countbuf[2] = '\0';
+                serial_puts(countbuf);
+                serial_puts("/16 processes\n");
             }
             else if (string_equal(input, "create"))
             {
@@ -347,7 +356,12 @@ void kmain(void)
                     proc_set_state(pid, PR_READY);
                 }
                 else
+                {
                     serial_puts("✗ Process creation failed\n");
+                    serial_puts("  Reason: Process table full or max (16) reached\n");
+                    serial_puts("  Use 'ps' to see active processes\n");
+                    serial_puts("  Use 'kill <pid>' to terminate a process\n");
+                }
             }
             else if (string_starts_with(input, "kill"))
             {
